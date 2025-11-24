@@ -4,7 +4,7 @@
 
 # Capteur BMP280
 
-1. Les addresses I2C possibles pour le BMP280 sont 0x76 et 0x77, selon la configuration du pin SDO/SDI.
+1. Les addresses I2C possibles pour le BMP280 sont 0x76 et 0x77, selon la configuration du pin SDO/SDI. Sur notre capteur, l'adresse est 0x77.
 2. Le registre permettant d'identifier le composant est le registre ID, situé à l'adresse 0xD0. La valeur attendue pour le BMP280 est 0x58.
 3. Le registre et la valeur permattant de placer le composant en mode normal sont le registre CTRL_MEAS (0xF4) avec mode[1:0] = 11.
 4. Les registres contenant l'étalonnage du composant sont les registres de 0x88 à 0xA1.
