@@ -34,7 +34,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define SLAVE_ADDRESS (0x77 << 1)
+#define ID 0xD0
+#define SIZE 1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -93,8 +95,34 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_I2C1_Init();
+  HAL_Delay(10);
   /* USER CODE BEGIN 2 */
   printf("============== TP_Réseaux/Bus ==============\r\n         Terlinden & Bonnet--Galand\r\n");
+  HAL_StatusTypeDef status;
+  uint8_t reg_address = ID; // 0xD0
+  uint8_t i2c_rx_buffer = 0;
+  status = HAL_I2C_Master_Transmit(&hi2c1, SLAVE_ADDRESS, &reg_address, SIZE, HAL_MAX_DELAY);
+
+  if (status == HAL_OK)
+  {
+      status = HAL_I2C_Master_Receive(&hi2c1, SLAVE_ADDRESS, &i2c_rx_buffer, SIZE, HAL_MAX_DELAY);
+
+      if (status == HAL_OK)
+      {
+          // Reading succeed.
+          printf("ID read (0x%02X) : 0x%02X\r\n", ID, i2c_rx_buffer);
+      }
+      else
+      {
+          // Reading failed.
+          printf("CKC - Reading failed after pointing the register.\r\n");
+      }
+  }
+  else
+  {
+      printf("CKC - Transmission of the address register failed.\r\n");
+  }
+
 
   /* USER CODE END 2 */
 
