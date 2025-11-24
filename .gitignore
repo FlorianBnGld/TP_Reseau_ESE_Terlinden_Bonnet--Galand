@@ -7,12 +7,12 @@ Release/
 *.bin
 *.hex
 
-# CubeIDE IDE files
-.cproject
-.project
-.mxproject
-.settings/
-*.launch
+# # CubeIDE IDE files
+# .cproject
+# .project
+# .mxproject
+# .settings/
+# *.launch
 
 # Build system
 *.d
