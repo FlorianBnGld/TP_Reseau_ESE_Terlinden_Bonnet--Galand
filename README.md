@@ -1,8 +1,10 @@
 # TP_Reseau_ESE_Terlinden_Bonnet--Galand
 
+
+# TP1 - Communication I2C avec un capteur BMP280
 ![Le Pinout de la STM](/datasheet/nucleo-f411re-f446re-wifi-serial1.png)
 
-# Capteur BMP280
+## Capteur BMP280
 
 1. Les addresses I2C possibles pour le BMP280 sont 0x76 et 0x77, selon la configuration du pin SDO/SDI. Sur notre capteur, l'adresse est 0x77.
 2. Le registre permettant d'identifier le composant est le registre ID, situé à l'adresse 0xD0. La valeur attendue pour le BMP280 est 0x58.
@@ -14,4 +16,42 @@
 
 ![Les fonctions](/datasheet/fonctions.png)
 
+
+# TP2
+
+
+Nous nous connectons en SSH à notre Raspberry Pi:
+```
+PS C:\Users\ombeline> ssh thomas@192.168.4.193
+The authenticity of host '192.168.4.193 (192.168.4.193)' can't be established.
+ED25519 key fingerprint is SHA256:7C8a9UbbyhT8ioKEpNc8v6FPypgk1JN+8w4kZu0JQ6c.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '192.168.4.193' (ED25519) to the list of known hosts.
+thomas@192.168.4.193's password:
+Linux thomas 6.12.47+rpt-rpi-v6 #1 Raspbian 1:6.12.47-1+rpt1 (2025-09-16) armv6l
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+thomas@thomas:~ $
+```
+L'addresse IP du Raspberry Pi est 192.168.4.193, elle est attribuée par le routeur DHCP du routeur lors de la première connexion du Raspberry Pi au réseau WiFi.
+
+## Minicom
+Nous installons minicom sur le Raspberry Pi, et activons le port gpio AMA0:
+Voila une petite demo de minicom:
+```
+Welcome to minicom 2.10
+
+OPTIONS: I18n
+Port /dev/ttyAMA0, 14:37:27 [U]
+
+Press CTRL-A Z for help on special keys
+
+coucou c thomas et florian  
+```
 
