@@ -55,3 +55,6 @@ Press CTRL-A Z for help on special keys
 coucou c thomas et florian  
 ```
 
+
+<img width="462" height="141" alt="image" src="https://github.com/user-attachments/assets/3386fd8a-7d24-4e4d-bb64-b072afc41bda" />
+
