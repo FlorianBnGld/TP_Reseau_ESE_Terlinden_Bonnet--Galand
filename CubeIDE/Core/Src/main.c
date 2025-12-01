@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "i2c.h"
 #include "usart.h"
 #include "gpio.h"
@@ -25,6 +26,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdlib.h>
+#include "shell.h"
+#include "BMP280_simple.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,22 +53,108 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+float K = 1.0f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int __io_putchar(int chr)
+int __io_putchar(int ch)
 {
-    HAL_UART_Transmit(&huart2, (uint8_t*)&chr, 1, HAL_MAX_DELAY);
-    return chr;
+	HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart1, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+	return ch;
 }
+
+
+int addition(int argc, char ** argv,h_shell_t *h_shell){
+	int sum=0;
+	for(int i=1;i<argc;i++){
+		sum+=atoi(argv[i]);
+	}
+	printf("\r\nsum=%d\r\n",sum);
+	return sum;
+}
+uint8_t drv_uart_receive(char * pData, uint16_t size){
+	HAL_UART_Receive(&huart2,(uint8_t*)pData,size,HAL_MAX_DELAY);
+	return 0;
+}
+uint8_t drv_uart_transmit(char * pData, uint16_t size){
+	HAL_UART_Transmit(&huart2,(uint8_t*)pData,size,HAL_MAX_DELAY);
+	return 0;
+}
+h_shell_t h_shell={
+		.huart=&huart2,
+		.drv_shell={
+				.drv_shell_receive =drv_uart_receive,
+				.drv_shell_transmit= drv_uart_transmit
+		}
+
+};
+
+int GET_T(int argc, char ** argv,h_shell_t *h_shell){
+	BMP280_S32_t temperature;
+	temperature =BMP280_get_temperature();
+
+	return 0;
+
+}
+
+
+int GET_P(int argc, char ** argv,h_shell_t *h_shell){
+	BMP280_S32_t pression;
+	pression =BMP280_get_pressure();
+
+	return 0;
+}
+
+int SET_K(int argc, char ** argv, h_shell_t *h_shell){
+    if(argc < 2){
+        printf("Usage : SET_K <valeur>\r\n");
+        return 1;
+    }
+
+    K = atof(argv[1]);  // conversion ASCII → float
+    printf("Coefficient K mis à jour : %.3f\r\n", K);
+    return 0;
+}
+int GET_K(int argc, char ** argv, h_shell_t *h_shell){
+    printf("Coefficient K : %.3f\r\n", K);
+    return 0;
+}
+
+int GET_A(int argc, char ** argv, h_shell_t *h_shell){
+
+	return 0;
+}
+
+
+void taskShell(void *unused){
+	shell_init(&h_shell);
+    shell_add('a', addition, "Ma super addition", &h_shell);
+    shell_add('t', GET_T, "Température compensée", &h_shell);
+    shell_add('p', GET_P, "Pression compensée", &h_shell);
+    shell_add('k', SET_K, "Fixe le coefficient K", &h_shell);
+    shell_add('K', GET_K, "Affiche K", &h_shell);
+    shell_add('A', GET_A, "Affiche l'angle", &h_shell);
+	shell_run(&h_shell);//shell_run contient une boucle infinie donc on ne retournera jamais de cette fonction
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+
+	if (huart->Instance==USART1){
+		shell_uart_rx_callback(&h_shell);
+	}
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -97,9 +187,14 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_I2C1_Init();
-  HAL_Delay(10);
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   printf("============== TP_Réseaux/Bus ==============\r\n         Terlinden & Bonnet--Galand\r\n");
+
+
+
+
+
   /*
   HAL_StatusTypeDef status;
   uint8_t reg_address = ID; // 0xD0
@@ -127,7 +222,7 @@ int main(void)
   }
   */
 
-
+  	/*
   	HAL_StatusTypeDef status;
 
   	uint8_t buffer[2];
@@ -157,8 +252,37 @@ int main(void)
 		printf("CKC - Transmission of the address register failed.\r\n");
 	}
 
+	*/
+
+	if (xTaskCreate(
+				taskShell,             // fonction
+				"SHELL",                // nom
+				512,                  // stack (en mots, pas en octets)
+				NULL,                 // paramètre
+				1, // priorité
+				NULL                  // handle (optionnel)
+	)!=pdPASS){
+		printf("Error creating task shell\r\n");
+		Error_Handler();
+	}
+
+
+
+
+
+
+	vTaskStartScheduler();
+
 
   /* USER CODE END 2 */
+
+  /* Call init function for freertos objects (in cmsis_os2.c) */
+  MX_FREERTOS_Init();
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
