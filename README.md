@@ -65,4 +65,15 @@ coucou c thomas et florian
 
 # TP3
 
+
 On suit les étapes, et on arrive à lancer le serveur, dans un premier temps seulement dans la loopback, puis ensuite sur le navigateur.
+(Insérer les photos dans le dossier serveur)
+Le décorateur @app.route sert à lier une fonction à une adresse. Grâce à ce décorateur, quand une application Web accède à l'adresse donnée dans le décorateur, la fonction associée s'éxécute.
+Le fragment <int:index> sert à extraire et convertir la valeur où est situé le fragment en entier int. Cela permet ensuite d'utiliser cette valeur pour l'appeler dans une fonction.
+(Insérer une capture d'écran avec le code python qui marche.)
+On modifie ensuite le code pour avoir une requête JSON.
+(Insérer une capture avec le JSON.)
+On implémente ensuite la page de l'erreur 404.
+(Insérer les captures de l'erreur 404.)
+Fin au niveau du test de la méthode POST.
+
