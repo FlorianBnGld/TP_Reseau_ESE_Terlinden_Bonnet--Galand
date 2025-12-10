@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "can.h"
 #include "i2c.h"
 #include "usart.h"
 #include "gpio.h"
@@ -54,12 +55,24 @@
 
 /* USER CODE BEGIN PV */
 float K = 1.0f;
+CAN_TxHeaderTypeDef TxHeader=
+		{
+		.StdId = 0x60,                  // Identifiant standard (11 bits)
+		.ExtId = 0x00,                  // Ignoré car IDE = CAN_ID_STD
+		.IDE = CAN_ID_STD,             // Trame standard
+		.RTR = CAN_RTR_DATA,            // Trame de type DATA
+		.DLC = 3,	                      // Nombre d’octets
+		.TransmitGlobalTime = DISABLE  // Toujours DISABLE si non utilisé
+		};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
+
+
+
 
 /* USER CODE END PFP */
 
@@ -134,6 +147,56 @@ int GET_A(int argc, char ** argv, h_shell_t *h_shell){
 	return 0;
 }
 
+int ANGLE(int argc, char **argv, h_shell_t *h_shell)
+{
+    if (argc < 3) {
+        printf("Usage : A <angle_decimal>\r\n");
+        return 1;
+    }
+
+    int angle = atoi(argv[1]);
+    int sens = atoi(argv[2]);
+
+    if (angle < 0 || angle > 180) {
+        printf("Angle must be between 0 and 180\r\n");
+        return 1;
+    }
+
+    uint8_t TxData[3];
+    TxData[0] = (uint8_t)sens;             // Adresse ou commande fixe
+    TxData[1] = (uint8_t)angle;   // L’angle demandé
+    TxData[2] = 0x04;             // Commande moteur (fixe dans ton exemple)
+
+    uint32_t TxMailbox;
+
+    /* Envoi */
+    HAL_StatusTypeDef ret =
+        HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox);
+
+    if (ret != HAL_OK) {
+        printf("HAL_CAN_AddTxMessage FAILED: %d\r\n", (int)ret);
+        return 1;
+    }
+
+    printf("Message queued in mailbox %lu\r\n", (unsigned long)TxMailbox);
+
+    /* Attendre la fin (polling) */
+    uint32_t timeout = HAL_GetTick() + 100;
+
+    while ((__HAL_CAN_GET_FLAG(&hcan1, CAN_FLAG_RQCP0) == RESET) &&
+           (__HAL_CAN_GET_FLAG(&hcan1, CAN_FLAG_RQCP1) == RESET) &&
+           (__HAL_CAN_GET_FLAG(&hcan1, CAN_FLAG_RQCP2) == RESET))
+    {
+        if (HAL_GetTick() > timeout) {
+            printf("TX timeout waiting mailbox complete\r\n");
+            break;
+        }
+    }
+
+    printf("TX send attempt complete\r\n");
+    return 0;
+}
+
 
 void taskShell(void *unused){
 	shell_init(&h_shell);
@@ -143,6 +206,7 @@ void taskShell(void *unused){
     shell_add('k', SET_K, "Fixe le coefficient K", &h_shell);
     shell_add('K', GET_K, "Affiche K", &h_shell);
     shell_add('A', GET_A, "Affiche l'angle", &h_shell);
+    shell_add('m', ANGLE, "set motor angle", &h_shell);
 	shell_run(&h_shell);//shell_run contient une boucle infinie donc on ne retournera jamais de cette fonction
 }
 
@@ -186,12 +250,50 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_I2C1_Init();
   MX_USART1_UART_Init();
+  MX_CAN1_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   printf("============== TP_Réseaux/Bus ==============\r\n         Terlinden & Bonnet--Galand\r\n");
 
+  /* Démarrer le CAN */
+  if (HAL_CAN_Start(&hcan1) != HAL_OK) {
+      printf("HAL_CAN_Start FAILED\r\n");
+      Error_Handler();
+  } else {
+      printf("CAN started OK\r\n");
+  }
 
+  /* Optionnel : activer notifications pour debug (Tx mailbox empty + bus off + error) */
+  if (HAL_CAN_ActivateNotification(&hcan1,
+          CAN_IT_TX_MAILBOX_EMPTY | CAN_IT_BUSOFF | CAN_IT_ERROR) != HAL_OK) {
+      printf("HAL_CAN_ActivateNotification FAILED\r\n");
+  }
+
+  /* Préparer et envoyer le message */
+  uint8_t TxData[3] = {0x00, 0x64, 0x04};
+  uint32_t TxMailbox;
+
+  /* envoyer et loguer le code de retour */
+  HAL_StatusTypeDef ret = HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox);
+  if (ret != HAL_OK) {
+      printf("HAL_CAN_AddTxMessage FAILED: %d\r\n", (int)ret);
+      Error_Handler();
+  } else {
+      printf("Message queued in mailbox %lu\r\n", (unsigned long)TxMailbox);
+  }
+
+  /* Attend (poll) la sortie du mailbox (optionnel simple) */
+  uint32_t timeout = HAL_GetTick() + 100; // 100 ms timeout
+  while ((__HAL_CAN_GET_FLAG(&hcan1, CAN_FLAG_RQCP0) == RESET) &&
+         (__HAL_CAN_GET_FLAG(&hcan1, CAN_FLAG_RQCP1) == RESET) &&
+         (__HAL_CAN_GET_FLAG(&hcan1, CAN_FLAG_RQCP2) == RESET)) {
+      if (HAL_GetTick() > timeout) {
+          printf("TX timeout waiting mailbox complete\r\n");
+          break;
+      }
+  }
+  printf("TX send attempt complete (check bus)\r\n");
 
 
 

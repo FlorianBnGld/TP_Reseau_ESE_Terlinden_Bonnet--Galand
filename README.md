@@ -77,3 +77,9 @@ On implémente ensuite la page de l'erreur 404.
 (Insérer les captures de l'erreur 404.)  
 Fin au niveau du test de la méthode POST.  
 
+# TP4
+
+## Bus CAN
+
+![Baudrate du CAN](/datasheet/baudratecan.jpg)
+On ajuste les paramètres du bus CAN pour obtenir un baudrate de 500 kbps.
