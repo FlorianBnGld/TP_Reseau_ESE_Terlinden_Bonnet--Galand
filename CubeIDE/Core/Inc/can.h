@@ -35,6 +35,8 @@ extern "C" {
 extern CAN_HandleTypeDef hcan1;
 
 /* USER CODE BEGIN Private defines */
+
+/*
 CAN_TxHeaderTypeDef TxHeader;
 uint8_t TxData[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
 uint32_t TxMailbox;
@@ -44,7 +46,11 @@ TxHeader.ExtId = 0x01;                  // Ignoré car IDE = CAN_ID_STD
 TxHeader.IDE = CAN_ID_STD;              // Trame standard
 TxHeader.RTR = CAN_RTR_DATA;            // Trame de type DATA
 TxHeader.DLC = 8;                       // Nombre d’octets
-TxHeader.TransmitGlobalTime = DISABLE;  // Toujours DISABLE si non utilisé/* USER CODE END Private defines */
+TxHeader.TransmitGlobalTime = DISABLE;  // Toujours DISABLE si non utilisé
+*/
+
+/* USER CODE END Private defines */
+
 
 void MX_CAN1_Init(void);
 

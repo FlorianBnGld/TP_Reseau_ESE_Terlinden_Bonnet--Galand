@@ -55,6 +55,11 @@
 
 /* USER CODE BEGIN PV */
 float K = 1.0f;
+int32_t raw_t;
+int32_t raw_p;
+BMP280_S32_t t_compensate;
+BMP280_S32_t p_compensate;
+
 CAN_TxHeaderTypeDef TxHeader=
 		{
 		.StdId = 0x60,                  // Identifiant standard (11 bits)
@@ -126,6 +131,7 @@ int GET_P(int argc, char ** argv,h_shell_t *h_shell){
 
 	return 0;
 }
+
 
 int SET_K(int argc, char ** argv, h_shell_t *h_shell){
     if(argc < 2){
@@ -255,6 +261,13 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   printf("============== TP_Réseaux/Bus ==============\r\n         Terlinden & Bonnet--Galand\r\n");
+
+
+  BMP280_Read_Raw(&hi2c1, &raw_t, &raw_p);
+  t_compensate = bmp280_compensate_T_int32((BMP280_S32_t) raw_t);
+  p_compensate = bmp280_compensate_P_int64((BMP280_S32_t) raw_p);
+  printf("RAW : T=%ld P=%ld | FINAL : T=%.2f C, P=%.2f hPa\r\n", raw_t, raw_p, t_compensate/100.0f, p_compensate/25600.0f);
+
 
   /* Démarrer le CAN */
   if (HAL_CAN_Start(&hcan1) != HAL_OK) {
