@@ -83,3 +83,8 @@ Fin au niveau du test de la méthode POST.
 
 ![Baudrate du CAN](/datasheet/baudratecan.jpg)
 On ajuste les paramètres du bus CAN pour obtenir un baudrate de 500 kbps.
+
+On règle le moteur de tel sorte qu'il tourne selon le bon angle, en effet contrairement à ce qui est indiqué le moteur n'est pas réglé a un pas par degré, mais à 0.9 degré par pas. On ajuste donc le nombre de pas en fonction de cette information. Ici on veut que le moteur tourne de 90 degrés, on lui envoie donc 100 pas (90/0.9).
+![moteur 90 degres](/datasheet/moteur.gif)
+
+
