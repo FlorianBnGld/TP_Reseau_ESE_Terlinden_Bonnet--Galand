@@ -55,6 +55,9 @@
 
 /* USER CODE BEGIN PV */
 float K = 1.0f;
+static float old_t = -999.0f;
+float delta = 0.0f;
+float new_t = 0.0f;
 
 
 CAN_TxHeaderTypeDef TxHeader=
@@ -113,14 +116,155 @@ h_shell_t h_shell={
 
 };
 
+int GET_T(int argc, char ** argv, h_shell_t *h_shell){
+
+    BMP280_S32_t temperature_raw;
+    float new_t;
+    float delta;
+    int32_t steps_int; // On utilise un entier signé standard pour le calcul
+
+    // 1. Acquisition
+    temperature_raw = BMP280_get_temperature();
+    new_t = temperature_raw / 20000.0f; // Garde ton facteur de conversion si c'est celui de ta lib
+
+    printf("new_t = %.2f\r\n", new_t);
+
+    // 2. Gestion du premier démarrage (pas de delta possible)
+    if (old_t == -999.0f) {
+        printf("First run, initializing old_t.\r\n");
+        old_t = new_t;
+        return 0;
+    }
+
+    // 3. Calcul du Delta
+    delta = new_t - old_t;
+    printf("old_t = %.2f | delta = %.2f\r\n", old_t, delta);
+
+    // 4. Conversion en pas (entier signé)
+    steps_int = (int32_t)(delta * 100.0f);
+    printf("steps raw = %ld\r\n", (long)steps_int);
+
+    // 5. Détermination du sens et valeur absolue
+    uint8_t sens;
+    uint8_t steps_to_send;
+
+    if (steps_int >= 0) {
+        sens = 1;
+        steps_to_send = (uint8_t)steps_int;
+    } else {
+        sens = 0;
+        // IMPORTANT : On rend le nombre positif pour l'envoi sur 8 bits
+        // Exemple : si steps_int est -50, on veut envoyer 50
+        steps_to_send = (uint8_t)(-steps_int);
+    }
+
+    // 6. Sécurité seuil max (sur la valeur absolue)
+    if (steps_to_send > 180) {
+        printf("Error: Too big difference (%d steps)\r\n", steps_to_send);
+        // Important : on met à jour old_t même en cas d'erreur pour éviter de bloquer ?
+        // Ici je choisis de mettre à jour pour repartir sur une base saine.
+        old_t = new_t;
+        return 1;
+    }
+
+    // Si la différence est trop petite (bruit), on ne fait rien
+    if (steps_to_send == 0) {
+        printf("Delta too small, no move.\r\n");
+        old_t = new_t;
+        return 0;
+    }
+
+    // 7. Préparation CAN
+    uint8_t TxData[3];
+    TxData[0] = sens;           // 1 ou 0
+    TxData[1] = steps_to_send;  // Valeur toujours positive (0 à 180)
+    TxData[2] = 0x04;           // Commande
+
+    uint32_t TxMailbox;
+    HAL_StatusTypeDef ret = HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox);
+
+    if (ret != HAL_OK) {
+        printf("HAL_CAN_AddTxMessage FAILED: %d\r\n", (int)ret);
+        return 1;
+    }
+
+    printf("Message sent: Sens=%d, Steps=%d\r\n", sens, steps_to_send);
+
+    // Attente (Optionnel, attention ça bloque le CPU)
+    /* ... ton code de polling ... */
+
+    // 8. MISE À JOUR CRITIQUE
+    // C'est ici qu'on stocke la nouvelle température comme référence pour la prochaine fois
+    old_t = new_t;
+
+    return 0;
+}
+
+
+
+/*
 int GET_T(int argc, char ** argv,h_shell_t *h_shell){
+	printf("old_t = %.2f\r\n", old_t);
 	BMP280_S32_t temperature;
 	temperature =BMP280_get_temperature();
+	new_t = temperature/20000.0f;
+	printf("new_t = %.2f\r\n", new_t);
+	delta = new_t - old_t;
+	printf("delta = %.2f\r\n", delta);
+	BMP280_S32_t steps = 100*delta;
+	printf("steps = %d\r\n", steps);
+	int sens;
+	if (steps > 0) {
+		sens = 1;
+	}
+	else {
+		sens = 0;
+	}
 
+	if (steps > 180) {
+		printf("Too big difference");
+		return 1;
+	}
+
+	uint8_t TxData[3];
+	TxData[0] = (uint8_t)sens;             // Adresse ou commande fixe
+	TxData[1] = (uint8_t)steps;   // L’angle demandé
+	TxData[2] = 0x04;         // Commande moteur
+
+	uint32_t TxMailbox;
+
+	// Envoi
+	HAL_StatusTypeDef ret =
+		HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox);
+
+	if (ret != HAL_OK) {
+		printf("HAL_CAN_AddTxMessage FAILED: %d\r\n", (int)ret);
+		return 1;
+	}
+
+	printf("Message queued in mailbox %lu\r\n", (unsigned long)TxMailbox);
+
+	// Attendre la fin (polling)
+	uint32_t timeout = HAL_GetTick() + 100;
+
+	while ((__HAL_CAN_GET_FLAG(&hcan1, CAN_FLAG_RQCP0) == RESET) &&
+		   (__HAL_CAN_GET_FLAG(&hcan1, CAN_FLAG_RQCP1) == RESET) &&
+		   (__HAL_CAN_GET_FLAG(&hcan1, CAN_FLAG_RQCP2) == RESET))
+	{
+		if (HAL_GetTick() > timeout) {
+			printf("TX timeout waiting mailbox complete\r\n");
+			break;
+		}
+	}
+
+	printf("TX send attempt complete\r\n");
+
+
+	old_t = new_t;
 	return 0;
 
 }
-
+*/
 
 int GET_P(int argc, char ** argv,h_shell_t *h_shell){
 	BMP280_S32_t pression;
@@ -264,10 +408,13 @@ int main(void)
   BMP280_S32_t t_compensate;
   BMP280_S32_t p_compensate;
 
+
+
   BMP280_Read_Raw(&hi2c1, &raw_t, &raw_p);
-  t_compensate = bmp280_compensate_T_int32((BMP280_S32_t) raw_t);
-  p_compensate = bmp280_compensate_P_int64((BMP280_S32_t) raw_p);
-  printf("RAW : T=%ld P=%ld | FINAL : T=%.2f C, P=%.2f hPa\r\n", raw_t, raw_p, raw_t/20000.0f, p_compensate/25600.0f);
+  new_t = raw_t/20000.0f;
+  //t_compensate = bmp280_compensate_T_int32((BMP280_S32_t) raw_t);
+  //p_compensate = bmp280_compensate_P_int64((BMP280_S32_t) raw_p);
+  printf("RAW : T=%ld P=%ld | FINAL : T=%.2f C, P=%.2f hPa\r\n", raw_t, raw_p, new_t, p_compensate/25600.0f);
 
 
   /* Démarrer le CAN */

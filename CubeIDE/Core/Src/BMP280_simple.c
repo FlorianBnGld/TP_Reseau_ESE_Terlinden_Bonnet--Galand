@@ -146,7 +146,7 @@ BMP280_S32_t BMP280_get_temperature() {
 
 	printf("Temperature: ");
 	//printf("0X%05lX", adc_T);
-	printf("%.2f", adc_T/20000.0f);
+	printf("%ld", adc_T);
 	printf("\r\n");
 
 	return adc_T;
