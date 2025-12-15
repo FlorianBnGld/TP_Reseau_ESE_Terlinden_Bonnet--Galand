@@ -88,3 +88,8 @@ On règle le moteur de tel sorte qu'il tourne selon le bon angle, en effet contr
 ![moteur 90 degres](/datasheet/moteur.gif)
 
 
+
+## Intégration
+
+On arrive à faire tourner le moteur en fonction de la différence de température à chaque appel de la commande "t". 
+
