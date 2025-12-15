@@ -55,10 +55,7 @@
 
 /* USER CODE BEGIN PV */
 float K = 1.0f;
-int32_t raw_t;
-int32_t raw_p;
-BMP280_S32_t t_compensate;
-BMP280_S32_t p_compensate;
+
 
 CAN_TxHeaderTypeDef TxHeader=
 		{
@@ -171,7 +168,7 @@ int ANGLE(int argc, char **argv, h_shell_t *h_shell)
     uint8_t TxData[3];
     TxData[0] = (uint8_t)sens;             // Adresse ou commande fixe
     TxData[1] = (uint8_t)angle;   // L’angle demandé
-    TxData[2] = 0x04;             // Commande moteur (fixe dans ton exemple)
+    TxData[2] = 0x04;             // Commande moteur
 
     uint32_t TxMailbox;
 
@@ -261,12 +258,16 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   printf("============== TP_Réseaux/Bus ==============\r\n         Terlinden & Bonnet--Galand\r\n");
-
+  BMP280_init();
+  int32_t raw_t;
+  int32_t raw_p;
+  BMP280_S32_t t_compensate;
+  BMP280_S32_t p_compensate;
 
   BMP280_Read_Raw(&hi2c1, &raw_t, &raw_p);
   t_compensate = bmp280_compensate_T_int32((BMP280_S32_t) raw_t);
   p_compensate = bmp280_compensate_P_int64((BMP280_S32_t) raw_p);
-  printf("RAW : T=%ld P=%ld | FINAL : T=%.2f C, P=%.2f hPa\r\n", raw_t, raw_p, t_compensate/100.0f, p_compensate/25600.0f);
+  printf("RAW : T=%ld P=%ld | FINAL : T=%.2f C, P=%.2f hPa\r\n", raw_t, raw_p, raw_t/20000.0f, p_compensate/25600.0f);
 
 
   /* Démarrer le CAN */

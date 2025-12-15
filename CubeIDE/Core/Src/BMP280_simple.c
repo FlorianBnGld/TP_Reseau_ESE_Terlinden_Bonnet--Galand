@@ -145,7 +145,8 @@ BMP280_S32_t BMP280_get_temperature() {
 	free(buf);
 
 	printf("Temperature: ");
-	printf("0X%05lX", adc_T);
+	//printf("0X%05lX", adc_T);
+	printf("%.2f", adc_T/20000.0f);
 	printf("\r\n");
 
 	return adc_T;
@@ -170,7 +171,7 @@ int BMP280_get_pressure() {
 	return 0;
 }
 
-
+BMP280_S32_t t_fine;
 
 // 32-bit Temp Compensation
 BMP280_S32_t bmp280_compensate_T_int32(BMP280_S32_t adc_T)
