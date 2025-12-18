@@ -67,15 +67,18 @@ coucou c thomas et florian
 
 
 On suit les étapes, et on arrive à lancer le serveur, dans un premier temps seulement dans la loopback, puis ensuite sur le navigateur.  
-(Insérer les photos dans le dossier serveur)  
+![Le serveur dans l'invite de commande](/Python/hello_world_terminal.png)
+![Le serveur dans le navigateur](/Python/hello_world.png)
 Le décorateur @app.route sert à lier une fonction à une adresse. Grâce à ce décorateur, quand une application Web accède à l'adresse donnée dans le décorateur, la fonction associée s'éxécute.  
 Le fragment <int:index> sert à extraire et convertir la valeur où est situé le fragment en entier int. Cela permet ensuite d'utiliser cette valeur pour l'appeler dans une fonction.  
-(Insérer une capture d'écran avec le code python qui marche.)  
-On modifie ensuite le code pour avoir une requête JSON.  
-(Insérer une capture avec le JSON.)  
-On implémente ensuite la page de l'erreur 404.  
-(Insérer les captures de l'erreur 404.)  
-Fin au niveau du test de la méthode POST.  
+![Methode GET avec du texte sur la page d'acceuil](/Python/get_txt.png)
+![Illustration de l'utilisation de <int:index>](/Python/affiche_les_lettres.png)
+On modifie ensuite le code pour avoir une requête JSON. (Ici par exemple pour .../api/welcome/3)
+![Mode développeur qui illustre de JSON](/Python/get_json.png)
+On implémente ensuite la page de l'erreur 404, dans le terminal... 
+![Illustration de l'erreur 404 dans le terminal](/Python/erreur404_terminal.png)
+... puis dans le navigateur.
+![Illustration de l'erreur 404 dans le navigateur](/Python/erreur404.png)
 
 # TP4
 
