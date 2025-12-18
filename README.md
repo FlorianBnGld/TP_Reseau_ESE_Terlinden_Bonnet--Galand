@@ -4,6 +4,12 @@
 # TP1 - Communication I2C avec un capteur BMP280
 ![Le Pinout de la STM](/datasheet/nucleo-f411re-f446re-wifi-serial1.png)
 
+# Pinout de la STM pour la suite du TP
+![Pinout STM](/datasheet/soc.png)
+
+# Branchement STM, Raspberry et Capteur
+![Branchement](/datasheet/branchement.png)
+
 ## Capteur BMP280
 
 1. Les addresses I2C possibles pour le BMP280 sont 0x76 et 0x77, selon la configuration du pin SDO/SDI. Sur notre capteur, l'adresse est 0x77.
@@ -100,4 +106,5 @@ On règle le moteur de tel sorte qu'il tourne selon le bon angle, en effet contr
 On arrive à faire tourner le moteur en fonction de la différence de température à chaque appel de la commande "t". 
 Ensuite, on cherche à faire le lien avec notre page Web. On route dans hello.py de manière à pouvoir appeler la commande "t" pour mesure la température. On met en place une console de Débug, puis un graphe qui trace l'évolution de la température dans le temps, ajoutant un point à chaque mesure. Dans un premier temps, on peut récupérer la température du capteur en appuyant sur "Ajouter temp", ou supprimer la valeur que l'on souhaite avec un bouton. On met en place dans un second temps, une fonction "Auto" qui appelle la commande "t", à intervalle régulier, configurable, par exemple, 1 seconde. On a bien un tracé de l'évolution de la température dans le temps, et le moteur tourne à chaque nouvelle mesure de manière proportionnelle à la différence avec la valeur précédente. 
 ![Interface finale](/Python/API_REST.png)
+![Test final](/Python/test_final.gif)
 
