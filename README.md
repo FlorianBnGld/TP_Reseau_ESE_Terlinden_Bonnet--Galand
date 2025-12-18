@@ -4,6 +4,12 @@
 # TP1 - Communication I2C avec un capteur BMP280
 ![Le Pinout de la STM](/datasheet/nucleo-f411re-f446re-wifi-serial1.png)
 
+# Pinout de la STM pour la suite du TP
+![Pinout STM](/datasheet/soc.png)
+
+# Branchement STM, Raspberry et Capteur
+![Branchement](/datasheet/branchement.png)
+
 ## Capteur BMP280
 
 1. Les addresses I2C possibles pour le BMP280 sont 0x76 et 0x77, selon la configuration du pin SDO/SDI. Sur notre capteur, l'adresse est 0x77.
