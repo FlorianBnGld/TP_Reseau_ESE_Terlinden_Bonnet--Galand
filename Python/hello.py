@@ -163,6 +163,12 @@ def delete_temperature(x):
     temperatures.pop(x)
     return '', 204
 
+@app.route('/temp/clear', methods=['DELETE'])
+def clear_temperatures():
+    global temperatures
+    temperatures = []
+    return '', 204
+
 @app.route('/pres/<int:x>', methods=['DELETE'])
 def delete_pressure(x):
     global pressures

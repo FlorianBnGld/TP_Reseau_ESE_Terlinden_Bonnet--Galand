@@ -231,6 +231,42 @@
         .debug-clear-btn:hover {
             background: #666;
         }
+
+        /* Zone graphe pleine largeur */
+        .graph-card {
+            margin-top: 20px;
+            grid-column: 1 / -1;
+        }
+
+        .graph-container {
+            position: relative;
+            width: 100%;
+            height: 260px;
+            margin-top: 10px;
+        }
+
+        #temp-chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .axis-label-y {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translate(-50%, -50%) rotate(-90deg);
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        .axis-label-x {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translate(-50%, 120%);
+            color: #555;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -249,16 +285,20 @@
                     <label>Ajouter une température (°C):</label>
                     <input type="number" id="temp-input" step="0.1" placeholder="20.5">
                 </div>
+                <div class="input-group">
+                    <label>Intervalle auto (s):</label>
+                    <input type="number" id="auto-temp-interval" min="0.1" step="0.1" value="1.0">
+                </div>
                 <div class="actions">
                     <button onclick="addTemperature()">Ajouter Temp</button>
                     <button onclick="refreshTemperatures()">Actualiser</button>
                     <button id="auto-temp-btn" onclick="toggleAutoTemperature()">Auto 1s: OFF</button>
+                    <button onclick="clearAllTemperatures()" class="delete">Effacer tout</button>
                 </div>
                 <div id="temp-status"></div>
                 <div class="list-container" id="temp-list">
                     <div class="empty">Aucune température enregistrée</div>
                 </div>
-                <canvas id="temp-chart" style="margin-top: 15px; width: 100%; height: 200px;"></canvas>
             </div>
 
             <!-- Card Pressions -->
@@ -300,6 +340,16 @@
             </div>
         </div>
 
+        <!-- Graphe températures pleine largeur -->
+        <div class="card graph-card">
+            <h2>Évolution des températures</h2>
+            <div class="graph-container">
+                <canvas id="temp-chart"></canvas>
+                <span class="axis-label-y">Température (°C)</span>
+                <span class="axis-label-x">Temps (s)</span>
+            </div>
+        </div>
+
         <!-- Console de debug -->
         <div class="card debug-card">
             <h2>Console de debug</h2>
@@ -315,6 +365,7 @@
     <script>
         const API_BASE = window.location.origin;
         let autoTempInterval = null;
+        let autoTempDelayMs = 1000;
 
         // --- Console de debug ---
         function logDebug(message, data = null) {
@@ -375,17 +426,24 @@
 
         function toggleAutoTemperature() {
             const btn = document.getElementById('auto-temp-btn');
+            const intervalInput = document.getElementById('auto-temp-interval');
             if (autoTempInterval) {
                 clearInterval(autoTempInterval);
                 autoTempInterval = null;
-                btn.textContent = 'Auto 1s: OFF';
+                btn.textContent = 'Auto: OFF';
                 logDebug('Auto température ARRÊTÉ');
             } else {
+                let seconds = parseFloat(intervalInput.value);
+                if (isNaN(seconds) || seconds <= 0) {
+                    seconds = 1.0;
+                    intervalInput.value = '1.0';
+                }
+                autoTempDelayMs = seconds * 1000;
                 autoTempInterval = setInterval(() => {
                     addTemperature();
-                }, 1000);
-                btn.textContent = 'Auto 1s: ON';
-                logDebug('Auto température DÉMARRÉ (1s)');
+                }, autoTempDelayMs);
+                btn.textContent = `Auto: ${seconds.toFixed(1)}s`;
+                logDebug('Auto température DÉMARRÉ', { interval_s: seconds });
             }
         }
 
@@ -441,25 +499,60 @@
 
             const min = Math.min(...values);
             const max = Math.max(...values);
-            const padding = 10;
-            const xStep = values.length > 1 ? (width - 2 * padding) / (values.length - 1) : 0;
+            const paddingLeft = 45;
+            const paddingBottom = 25;
+            const paddingTop = 15;
+            const paddingRight = 10;
+            const n = values.length;
             const range = max - min || 1;
 
+            // Axes
             ctx.strokeStyle = '#ddd';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(padding, height - padding);
-            ctx.lineTo(width - padding, height - padding);
-            ctx.moveTo(padding, padding);
-            ctx.lineTo(padding, height - padding);
+            // Axe X
+            ctx.moveTo(paddingLeft, height - paddingBottom);
+            ctx.lineTo(width - paddingRight, height - paddingBottom);
+            // Axe Y
+            ctx.moveTo(paddingLeft, paddingTop);
+            ctx.lineTo(paddingLeft, height - paddingBottom);
             ctx.stroke();
 
+            // Graduation Y (°C) : min, milieu, max
+            ctx.fillStyle = '#555';
+            ctx.font = '11px Segoe UI';
+            const yTicks = [min, (min + max) / 2, max];
+            yTicks.forEach(val => {
+                const y = height - paddingBottom - ((val - min) / range) * (height - paddingTop - paddingBottom);
+                ctx.fillText(val.toFixed(1), 2, y + 3);
+                ctx.strokeStyle = 'rgba(200,200,200,0.3)';
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, y);
+                ctx.lineTo(width - paddingRight, y);
+                ctx.stroke();
+            });
+
+            // Graduation X (temps en secondes, basé sur l'index)
+            const xTicks = [0, Math.floor((n - 1) / 2), n - 1].filter((v, i, a) => a.indexOf(v) === i && v >= 0);
+            xTicks.forEach(idx => {
+                const x = paddingLeft + (n > 1 ? idx * (width - paddingLeft - paddingRight) / (n - 1) : 0);
+                const label = idx.toString(); // interprété comme secondes
+                ctx.fillStyle = '#555';
+                ctx.fillText(label, x - 5, height - paddingBottom + 15);
+                ctx.strokeStyle = 'rgba(200,200,200,0.3)';
+                ctx.beginPath();
+                ctx.moveTo(x, paddingTop);
+                ctx.lineTo(x, height - paddingBottom);
+                ctx.stroke();
+            });
+
+            // Courbe
             ctx.strokeStyle = '#667eea';
             ctx.lineWidth = 2;
             ctx.beginPath();
             values.forEach((v, i) => {
-                const x = padding + i * xStep;
-                const y = height - padding - ((v - min) / range) * (height - 2 * padding);
+                const x = paddingLeft + (n > 1 ? i * (width - paddingLeft - paddingRight) / (n - 1) : 0);
+                const y = height - paddingBottom - ((v - min) / range) * (height - paddingTop - paddingBottom);
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             });
@@ -477,6 +570,23 @@
                 }
             } catch (error) {
                 console.error('Erreur:', error);
+            }
+        }
+
+        async function clearAllTemperatures() {
+            try {
+                logDebug('DELETE /temp/clear -> requête');
+                const response = await fetch(`${API_BASE}/temp/clear`, {
+                    method: 'DELETE'
+                });
+                if (response.ok || response.status === 204) {
+                    logDebug('DELETE /temp/clear -> OK', { status: response.status });
+                    await refreshTemperatures();
+                } else {
+                    logDebug('DELETE /temp/clear -> réponse non OK', { status: response.status });
+                }
+            } catch (error) {
+                logDebug('DELETE /temp/clear -> ERREUR', { message: error.message });
             }
         }
 
