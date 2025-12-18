@@ -66,7 +66,8 @@ coucou c thomas et florian
 # TP3
 
 
-On suit les étapes, et on arrive à lancer le serveur, dans un premier temps seulement dans la loopback, puis ensuite sur le navigateur.  
+On suit les étapes, et on arrive à lancer le serveur. (!!! Le dossier s'appelle "serveur").  
+Dans un premier temps seulement dans la loopback, puis ensuite sur le navigateur.  
 ![Le serveur dans l'invite de commande](/Python/hello_world_terminal.png)
 ![Le serveur dans le navigateur](/Python/hello_world.png)
 Le décorateur @app.route sert à lier une fonction à une adresse. Grâce à ce décorateur, quand une application Web accède à l'adresse donnée dans le décorateur, la fonction associée s'éxécute.  
@@ -79,6 +80,8 @@ On implémente ensuite la page de l'erreur 404, dans le terminal...
 ![Illustration de l'erreur 404 dans le terminal](/Python/erreur404_terminal.png)
 ... puis dans le navigateur.
 ![Illustration de l'erreur 404 dans le navigateur](/Python/erreur404.png)
+Dans un dernier temps, on met en place une API REST avec une page HTML : 
+![Illustration de l'erreur 404 dans le navigateur](/Python/serveur.jpg)
 
 # TP4
 
