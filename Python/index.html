@@ -197,6 +197,40 @@
         .refresh-btn:hover {
             background: #218838;
         }
+
+        /* Console de debug */
+        .debug-card {
+            margin-top: 20px;
+        }
+
+        .debug-console {
+            background: #111;
+            color: #0f0;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 0.85em;
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .debug-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+
+        .debug-clear-btn {
+            background: #444;
+            min-width: auto;
+            padding: 6px 12px;
+            font-size: 0.8em;
+        }
+
+        .debug-clear-btn:hover {
+            background: #666;
+        }
     </style>
 </head>
 <body>
@@ -218,16 +252,18 @@
                 <div class="actions">
                     <button onclick="addTemperature()">Ajouter Temp</button>
                     <button onclick="refreshTemperatures()">Actualiser</button>
+                    <button id="auto-temp-btn" onclick="toggleAutoTemperature()">Auto 1s: OFF</button>
                 </div>
                 <div id="temp-status"></div>
                 <div class="list-container" id="temp-list">
                     <div class="empty">Aucune température enregistrée</div>
                 </div>
+                <canvas id="temp-chart" style="margin-top: 15px; width: 100%; height: 200px;"></canvas>
             </div>
 
             <!-- Card Pressions -->
             <div class="card">
-                <h2>Pressions</h2>
+                <h2>Pressions WIP</h2>
                 <div class="value" id="current-pres">
                     <span id="pres-value">--</span>
                     <span class="unit">hPa</span>
@@ -246,14 +282,11 @@
                 </div>
             </div>
 
-            <!-- Card Échelle et Angle -->
+            <!-- Card Échelle -->
             <div class="card">
-                <h2>Échelle & Angle</h2>
+                <h2>Échelle</h2>
                 <div class="value">
                     Échelle: <span id="scale-value">1.0</span> <span class="unit">K</span>
-                </div>
-                <div class="value">
-                    Angle: <span id="angle-value">--</span>
                 </div>
                 <div class="input-group">
                     <label>Modifier l'échelle (K):</label>
@@ -262,9 +295,17 @@
                 <div class="actions">
                     <button onclick="updateScale()">Mettre à jour</button>
                     <button onclick="refreshScale()">Actualiser</button>
-                    <button onclick="refreshAngle()">Calculer Angle</button>
                 </div>
                 <div id="scale-status"></div>
+            </div>
+        </div>
+
+        <!-- Console de debug -->
+        <div class="card debug-card">
+            <h2>Console de debug</h2>
+            <div id="debug-console" class="debug-console"></div>
+            <div class="debug-controls">
+                <button class="debug-clear-btn" onclick="clearDebug()">Effacer</button>
             </div>
         </div>
     </div>
@@ -273,6 +314,31 @@
 
     <script>
         const API_BASE = window.location.origin;
+        let autoTempInterval = null;
+
+        // --- Console de debug ---
+        function logDebug(message, data = null) {
+            const consoleDiv = document.getElementById('debug-console');
+            const now = new Date();
+            const time = now.toISOString().split('T')[1].split('.')[0]; // HH:MM:SS
+
+            let line = `[${time}] ${message}`;
+            if (data !== null && data !== undefined) {
+                try {
+                    line += ' ' + JSON.stringify(data);
+                } catch (e) {
+                    line += ' ' + String(data);
+                }
+            }
+
+            consoleDiv.textContent += line + '\n';
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function clearDebug() {
+            const consoleDiv = document.getElementById('debug-console');
+            consoleDiv.textContent = '';
+        }
 
         // Fonctions pour les températures
         async function addTemperature() {
@@ -281,6 +347,7 @@
             const statusDiv = document.getElementById('temp-status');
             
             try {
+                logDebug('POST /temp/ -> envoi', { temp });
                 const response = await fetch(`${API_BASE}/temp/`, {
                     method: 'POST',
                     headers: {
@@ -290,6 +357,7 @@
                 });
                 
                 if (response.ok || response.status === 204) {
+                    logDebug('POST /temp/ -> OK', { status: response.status });
                     statusDiv.innerHTML = '<div class="status success">Température ajoutée avec succès!</div>';
                     input.value = '';
                     setTimeout(() => {
@@ -300,19 +368,39 @@
                     throw new Error('Erreur lors de l\'ajout');
                 }
             } catch (error) {
+                logDebug('POST /temp/ -> ERREUR', { message: error.message });
                 statusDiv.innerHTML = '<div class="status error">Erreur: ' + error.message + '</div>';
+            }
+        }
+
+        function toggleAutoTemperature() {
+            const btn = document.getElementById('auto-temp-btn');
+            if (autoTempInterval) {
+                clearInterval(autoTempInterval);
+                autoTempInterval = null;
+                btn.textContent = 'Auto 1s: OFF';
+                logDebug('Auto température ARRÊTÉ');
+            } else {
+                autoTempInterval = setInterval(() => {
+                    addTemperature();
+                }, 1000);
+                btn.textContent = 'Auto 1s: ON';
+                logDebug('Auto température DÉMARRÉ (1s)');
             }
         }
 
         async function refreshTemperatures() {
             try {
+                logDebug('GET /temp/ -> requête');
                 const response = await fetch(`${API_BASE}/temp/`);
                 const temps = await response.json();
+                logDebug('GET /temp/ -> réponse', temps);
                 const listDiv = document.getElementById('temp-list');
                 
                 if (temps.length === 0) {
                     listDiv.innerHTML = '<div class="empty">Aucune température enregistrée</div>';
                     document.getElementById('temp-value').textContent = '--';
+                    updateTempChart([]);
                 } else {
                     listDiv.innerHTML = temps.map((temp, index) => `
                         <div class="list-item">
@@ -324,10 +412,58 @@
                         </div>
                     `).join('');
                     document.getElementById('temp-value').textContent = temps[temps.length - 1];
+                    updateTempChart(temps);
                 }
             } catch (error) {
+                logDebug('GET /temp/ -> ERREUR', { message: error.message });
                 console.error('Erreur:', error);
             }
+        }
+
+        function updateTempChart(temps) {
+            const canvas = document.getElementById('temp-chart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = canvas.clientWidth;
+            const height = canvas.height = canvas.clientHeight;
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (!temps || temps.length === 0) {
+                ctx.fillStyle = '#999';
+                ctx.font = '12px Segoe UI';
+                ctx.fillText('Aucune donnée', 10, 20);
+                return;
+            }
+
+            const values = temps.map(Number).filter(v => !isNaN(v));
+            if (values.length === 0) return;
+
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const padding = 10;
+            const xStep = values.length > 1 ? (width - 2 * padding) / (values.length - 1) : 0;
+            const range = max - min || 1;
+
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            values.forEach((v, i) => {
+                const x = padding + i * xStep;
+                const y = height - padding - ((v - min) / range) * (height - 2 * padding);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
         }
 
         async function deleteTemperature(index) {
@@ -351,6 +487,7 @@
             const statusDiv = document.getElementById('pres-status');
             
             try {
+                logDebug('POST /pres/ -> envoi', { pres });
                 const response = await fetch(`${API_BASE}/pres/`, {
                     method: 'POST',
                     headers: {
@@ -360,6 +497,7 @@
                 });
                 
                 if (response.ok || response.status === 204) {
+                    logDebug('POST /pres/ -> OK', { status: response.status });
                     statusDiv.innerHTML = '<div class="status success">Pression ajoutée avec succès!</div>';
                     input.value = '';
                     setTimeout(() => {
@@ -370,14 +508,17 @@
                     throw new Error('Erreur lors de l\'ajout');
                 }
             } catch (error) {
+                logDebug('POST /pres/ -> ERREUR', { message: error.message });
                 statusDiv.innerHTML = '<div class="status error">Erreur: ' + error.message + '</div>';
             }
         }
 
         async function refreshPressures() {
             try {
+                logDebug('GET /pres/ -> requête');
                 const response = await fetch(`${API_BASE}/pres/`);
                 const pres = await response.json();
+                logDebug('GET /pres/ -> réponse', pres);
                 const listDiv = document.getElementById('pres-list');
                 
                 if (pres.length === 0) {
@@ -396,6 +537,7 @@
                     document.getElementById('pres-value').textContent = pres[pres.length - 1];
                 }
             } catch (error) {
+                logDebug('GET /pres/ -> ERREUR', { message: error.message });
                 console.error('Erreur:', error);
             }
         }
@@ -421,6 +563,7 @@
             const statusDiv = document.getElementById('scale-status');
             
             try {
+                logDebug('POST /scale/0 -> envoi', { scale });
                 const response = await fetch(`${API_BASE}/scale/0`, {
                     method: 'POST',
                     headers: {
@@ -430,58 +573,41 @@
                 });
                 
                 if (response.ok || response.status === 204) {
+                    logDebug('POST /scale/0 -> OK', { status: response.status });
                     statusDiv.innerHTML = '<div class="status success">Échelle mise à jour avec succès!</div>';
                     input.value = '';
                     setTimeout(() => {
                         statusDiv.innerHTML = '';
                         refreshScale();
-                        refreshAngle();
                     }, 2000);
                 } else {
                     throw new Error('Erreur lors de la mise à jour');
                 }
             } catch (error) {
+                logDebug('POST /scale/0 -> ERREUR', { message: error.message });
                 statusDiv.innerHTML = '<div class="status error">Erreur: ' + error.message + '</div>';
             }
         }
 
         async function refreshScale() {
             try {
+                logDebug('GET /scale/ -> requête');
                 const response = await fetch(`${API_BASE}/scale/`);
                 const data = await response.json();
+                logDebug('GET /scale/ -> réponse', data);
                 document.getElementById('scale-value').textContent = data.scale;
             } catch (error) {
+                logDebug('GET /scale/ -> ERREUR', { message: error.message });
                 console.error('Erreur:', error);
             }
         }
 
-        async function refreshAngle() {
-            try {
-                const response = await fetch(`${API_BASE}/angle/`);
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('angle-value').textContent = data.angle.toFixed(2);
-                } else {
-                    document.getElementById('angle-value').textContent = '--';
-                }
-            } catch (error) {
-                document.getElementById('angle-value').textContent = '--';
-            }
-        }
-
-        // Fonction pour tout actualiser
+        // Fonction pour tout actualiser (uniquement sur clic bouton)
         function refreshAll() {
             refreshTemperatures();
             refreshPressures();
             refreshScale();
-            refreshAngle();
         }
-
-        // Actualisation automatique toutes les 5 secondes
-        setInterval(refreshAll, 5000);
-
-        // Chargement initial
-        refreshAll();
     </script>
 </body>
 </html>

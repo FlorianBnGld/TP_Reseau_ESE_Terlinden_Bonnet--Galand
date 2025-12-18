@@ -100,15 +100,15 @@ int addition(int argc, char ** argv,h_shell_t *h_shell){
 	return sum;
 }
 uint8_t drv_uart_receive(char * pData, uint16_t size){
-	HAL_UART_Receive(&huart2,(uint8_t*)pData,size,HAL_MAX_DELAY);
+	HAL_UART_Receive(&huart1,(uint8_t*)pData,size,HAL_MAX_DELAY);
 	return 0;
 }
 uint8_t drv_uart_transmit(char * pData, uint16_t size){
-	HAL_UART_Transmit(&huart2,(uint8_t*)pData,size,HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart1,(uint8_t*)pData,size,HAL_MAX_DELAY);
 	return 0;
 }
 h_shell_t h_shell={
-		.huart=&huart2,
+		.huart=&huart1,
 		.drv_shell={
 				.drv_shell_receive =drv_uart_receive,
 				.drv_shell_transmit= drv_uart_transmit
@@ -127,7 +127,7 @@ int GET_T(int argc, char ** argv, h_shell_t *h_shell){
     temperature_raw = BMP280_get_temperature();
     new_t = temperature_raw / 20000.0f; // Garde ton facteur de conversion si c'est celui de ta lib
 
-    printf("new_t = %.2f\r\n", new_t);
+    printf("%.2f\n", new_t);
 
     // 2. Gestion du premier démarrage (pas de delta possible)
     if (old_t == -999.0f) {
